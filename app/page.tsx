@@ -232,6 +232,98 @@ function scoreHorse(horse: { umaban: number; wakuban: number; birthdate?: string
   return s;
 }
 
+// ─── Race attribute & deterministic comment helpers ────────────────────────
+type Race = (typeof RACES)[number];
+type RaceAttr = { surface: "turf"|"dirt"; distClass: "sprint"|"mile"|"middle"|"long"; isG1: boolean };
+
+function getRaceAttr(race: Race): RaceAttr {
+  const m = race.distance.match(/\d+/);
+  const dist = m ? parseInt(m[0]) : 1600;
+  const surface: "turf"|"dirt" = race.distance.startsWith("ダ") ? "dirt" : "turf";
+  const distClass: "sprint"|"mile"|"middle"|"long" =
+    dist <= 1400 ? "sprint" : dist <= 1600 ? "mile" : dist < 2100 ? "middle" : "long";
+  return { surface, distClass, isG1: race.grade === "G1" };
+}
+
+function cSeed(lifePath: number, gogyo: string, raceId: string, salt = 0): number {
+  const s = `${lifePath}:${gogyo}:${raceId}:${salt}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+const GOGYO_DESC: Record<string, string> = {
+  木: "「木」は柔軟と成長を象徴。変化に対応できる差し・追込馬と深く共鳴します。",
+  火: "「火」は瞬発力と情熱を象徴。先行・逃げ馬のスピードと強く共鳴します。",
+  土: "「土」は安定と持久を象徴。長距離を粘り切る馬や重厚な末脚の馬と縁があります。",
+  金: "「金」は鋭さと決断を象徴。切れ味鋭い差し馬、堅実なデータ馬と共鳴します。",
+  水: "「水」は柔軟と流れを象徴。展開に乗る器用な馬、流れを読む馬との縁が深い。",
+};
+
+function gogyoRaceNote(gogyo: string, attr: RaceAttr): string {
+  const t: Record<string, Record<string, string>> = {
+    dirt:   { 木:"ダートと「木」は相剋の関係。展開力でカバーする馬を見極めて。", 火:"ダートと「火」の力強さが共鳴。先行馬がレースを支配しやすい一戦。", 土:"ダートと「土」は同じ大地の属性。最高の相性です。", 金:"ダートと「金」は砂を制する強さで共鳴。力強い馬が輝く。", 水:"ダートと「水」は流れを読む力で共鳴。展開次第で動く一戦。" },
+    long:   { 木:"長距離と「木」の粘り強さが共鳴。根を張るように走り切る馬が吉。", 火:"長距離では「火」の瞬発力を持続力に変えて。終盤の爆発に期待。", 土:"長距離と「土」の持久力は最高の組み合わせ。スタミナ馬を信頼して。", 金:"長距離で「金」の不屈の意志が試される。諦めない馬との縁が深まる。", 水:"長距離と「水」の持続エネルギーは一致。終盤を制す馬を狙え。" },
+    short:  { 木:"短距離・マイルで「木」の機動力が光る。素早い動きを見せる馬が吉。", 火:"短距離・マイルと「火」の瞬発力は最高の相性。切れ味鋭い馬を狙え。", 土:"短距離で「土」の安定感がフィット。堅実に走り抜く馬が吉。", 金:"短距離・マイルで「金」の鋭さが冴える。キレ味No.1の馬を探せ。", 水:"短距離で「水」の流動的な動きが光る。展開利を得る馬が有利。" },
+    middle: { 木:"中距離で「木」の柔軟性が活きる。様々な展開に対応できる馬を信頼。", 火:"中距離で「火」の情熱が持続。先行から押し切る馬との縁が深まる。", 土:"中距離と「土」の安定力は相性良好。堅実な本命馬の力が発揮される。", 金:"中距離で「金」の判断力が光る。精度の高い競馬をする馬との縁がある。", 水:"中距離で「水」の読みが冴える。展開を制する馬が最終的に勝利する。" },
+  };
+  if (attr.surface === "dirt") return t.dirt[gogyo] ?? "";
+  if (attr.distClass === "long") return t.long[gogyo] ?? "";
+  if (attr.distClass === "sprint" || attr.distClass === "mile") return t.short[gogyo] ?? "";
+  return t.middle[gogyo] ?? "";
+}
+
+function gogyoRankNote(gogyo: string, rank: number, attr: RaceAttr): string {
+  if (rank === 0) return gogyoRaceNote(gogyo, attr);
+  if (rank === 1) return `「${gogyo}」の安定した気が対抗馬との縁を深めます。1着馬との組み合わせを信じて。`;
+  return `「${gogyo}」の五行が大穴を引き寄せる役目を担います。少額で夢をつかみに。`;
+}
+
+function genComment(rank: number, horse: ScoredHorse, up: UserProfile, moon: ReturnType<typeof getMoonPhase>, race: Race): string {
+  const attr = getRaceAttr(race);
+  const seed = cSeed(up.lifePath, up.gogyo, race.id, rank);
+  const g1 = attr.isG1 ? `${race.name}の大舞台、` : "";
+  const d = race.distance;
+
+  if (rank === 0) {
+    const pool = attr.surface === "dirt"
+      ? [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番が大地のエネルギーで共鳴。ダート${d}の力勝負で${moon.name}の「${moon.tag}」がこの馬を後押しします。`,
+         `${g1}${d}のダート戦、ライフパス数${up.lifePath}が${horse.umaban}番の根性と共振。${moon.name}の今日、力強い走りが期待できます。`]
+      : attr.distClass === "long"
+      ? [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番の縁が${d}の長丁場で輝きます。${moon.name}の「${moon.tag}」エネルギーが持久力の馬を導きます。`,
+         `${g1}${d}の長距離で持続する波動がライフパス数${up.lifePath}と${horse.umaban}番を結びます。${moon.name}の今日は底力が全てを決します。`]
+      : attr.distClass === "sprint"
+      ? [`${g1}ライフパス数${up.lifePath}の瞬発力が${horse.umaban}番と共鳴。${d}の速い流れで${moon.name}の「${moon.tag}」がスピードを爆発させます。`,
+         `${g1}${d}の短距離、ライフパス数${up.lifePath}が${horse.umaban}番の切れ味と直結。${moon.name}の今日、一瞬の閃きを信じて。`]
+      : [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番の波動が${d}の舞台で深く共鳴。${moon.name}の「${moon.tag}」エネルギーがこの縁を確かなものにします。`,
+         `${g1}${d}の舞台でライフパス数${up.lifePath}が${horse.umaban}番を指し示しています。${moon.name}の今日、この縁を信じて全力で臨みましょう。`];
+    return pool[seed % pool.length];
+  }
+
+  if (rank === 1) {
+    const pool = attr.surface === "dirt"
+      ? [`${up.sunSign}の安定した力が${horse.wakuban}枠と結びつきます。ダート${d}の力比べで1着馬との馬連が黄金の組み合わせになります。`,
+         `干支${up.eto}の「${up.gogyo}」の気がダート${d}の${horse.name}を対抗に押し上げます。1着馬との組み合わせで手堅く。`]
+      : attr.distClass === "long"
+      ? [`${up.sunSign}の持久力が${horse.wakuban}枠と共鳴します。${d}の長丁場は1着馬との馬連で対抗として押さえて。`,
+         `スタミナが問われる${d}。${up.sunSign}の粘り強さが${horse.name}との縁を深めます。1着馬と合わせた馬連が一手。`]
+      : [`${up.sunSign}の属性が${horse.wakuban}枠と縁を結びます。${d}の舞台で1着馬との組み合わせを対抗として押さえる一手。`,
+         `${up.sunSign}の感性が${horse.name}の末脚と共鳴。${d}の流れで1着馬との馬連が面白い。`];
+    return pool[seed % pool.length];
+  }
+
+  const g1b = attr.isG1 ? "G1の大舞台だからこそ、" : "";
+  const pool = attr.surface === "dirt"
+    ? [`${g1b}干支${up.eto}年の「${up.gogyo}」がダートの荒れ展開で穴を引き寄せます。${d}の力比べで${horse.name}が激走する可能性を秘めています。`,
+       `${g1b}「${up.gogyo}」の五行がダート${d}で穴馬を導きます。${horse.name}への少額投資で夢を買う一手に。`]
+    : attr.distClass === "long"
+    ? [`${g1b}干支${up.eto}の「${up.gogyo}」が長距離の底力勝負で穴を引き寄せます。${horse.name}が${d}の舞台で激走する一場面を描いています。`,
+       `${g1b}${d}のスタミナ勝負、「${up.gogyo}」の持続エネルギーが${horse.name}を浮上させます。大穴として少額で夢を。`]
+    : [`${g1b}干支${up.eto}年の五行「${up.gogyo}」が穴を引き寄せます。${d}の展開で${horse.name}が激走する可能性を秘めています。`,
+       `${g1b}「${up.gogyo}」の気が${d}の展開で穴馬を呼び込みます。${horse.name}への少額投資で夢を買う一手に。`];
+  return pool[seed % pool.length];
+}
+
 const WAKU_BG: Record<number, string>   = {1:"#fff",2:"#111",3:"#e22",4:"#36c",5:"#fc0",6:"#3a3",7:"#f84",8:"#f48",9:"#aaa",10:"#7a5230"};
 const WAKU_TEXT: Record<number, string> = {1:"#111",2:"#fff",3:"#fff",4:"#fff",5:"#111",6:"#fff",7:"#fff",8:"#fff",9:"#111",10:"#fff"};
 const RANK_EMOJI = ["🥇","🥈","🥉"];
@@ -267,15 +359,15 @@ export default function KeibaUranai() {
     }, 2200);
   }
 
-  const BG = "linear-gradient(160deg,#08080f 0%,#10071c 55%,#0b160a 100%)";
-  const cardBase: React.CSSProperties = { background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"20px" };
-  const goldCard: React.CSSProperties = { background:"rgba(200,160,50,0.07)", border:"1px solid rgba(200,160,50,0.2)", borderRadius:14, padding:"18px 20px" };
+  const BG = "linear-gradient(160deg,#0d1117 0%,#131828 55%,#0f1a10 100%)";
+  const cardBase: React.CSSProperties = { background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:14, padding:"20px" };
+  const goldCard: React.CSSProperties = { background:"rgba(200,160,50,0.11)", border:"1px solid rgba(200,160,50,0.28)", borderRadius:14, padding:"18px 20px" };
   const btn: React.CSSProperties = { width:"100%", padding:"17px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#c8a040,#e8d070)", color:"#080808", fontWeight:900, fontSize:16, cursor:"pointer", letterSpacing:1 };
   const btnGhost: React.CSSProperties = { width:"100%", padding:"13px", borderRadius:12, border:"1px solid rgba(255,255,255,0.08)", background:"transparent", color:"#605850", cursor:"pointer", fontSize:13 };
 
   return (
     <div style={{ minHeight:"100vh", background:BG, fontFamily:"'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif", color:"#f0ead6", paddingBottom:64, overflow:"hidden" }}>
-      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, background:"radial-gradient(ellipse 55% 35% at 15% 15%,rgba(180,140,50,.09) 0%,transparent 70%),radial-gradient(ellipse 45% 55% at 85% 85%,rgba(50,110,50,.07) 0%,transparent 70%)" }} />
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, background:"radial-gradient(ellipse 55% 35% at 15% 15%,rgba(180,140,50,.13) 0%,transparent 70%),radial-gradient(ellipse 45% 55% at 85% 85%,rgba(50,110,50,.10) 0%,transparent 70%)" }} />
       <div style={{ position:"relative", zIndex:1, maxWidth:420, margin:"0 auto", padding:"0 20px" }}>
         <div style={{ textAlign:"center", paddingTop:44, paddingBottom:28 }}>
           <div style={{ fontSize:11, letterSpacing:7, color:"#806840", marginBottom:8, textTransform:"uppercase" }}>Celestial Racing</div>
@@ -313,7 +405,7 @@ export default function KeibaUranai() {
             <div style={{ ...cardBase, marginBottom:14 }}>
               <label style={{ fontSize:12, color:"#907040", display:"block", marginBottom:8, letterSpacing:1 }}>レースを選ぶ</label>
               <select value={selectedRaceId} onChange={e => { setSelectedRaceId(e.target.value); if (e.target.value) trackEvent("race_selected", { race_id: e.target.value }); }}
-                style={{ width:"100%", padding:"14px 16px", borderRadius:10, border:"1px solid rgba(200,160,50,0.3)", background:"#181018", color: selectedRaceId ? "#f0ead6" : "#605040", fontSize:15, outline:"none", boxSizing:"border-box", appearance:"none", cursor:"pointer" }}>
+                style={{ width:"100%", padding:"14px 16px", borderRadius:10, border:"1px solid rgba(200,160,50,0.3)", background:"#1e1e2e", color: selectedRaceId ? "#f0ead6" : "#706050", fontSize:15, outline:"none", boxSizing:"border-box", appearance:"none", cursor:"pointer" }}>
                 <option value="">-- レースを選択してください --</option>
                 {RACES.map(r => (
                   <option key={r.id} value={r.id}>{r.grade ? `【${r.grade}】` : ""}{r.name}　{r.date.replace("2026年","")}</option>
@@ -354,11 +446,13 @@ export default function KeibaUranai() {
         {step === "result" && result && (() => {
           const top3 = result.ranked.slice(0, 3);
           const maxScore = top3[0].score;
+          const raceAttr = getRaceAttr(selectedRace!);
+          const rNote = gogyoRaceNote(result.up.gogyo, raceAttr);
           const profileItems = [
-            { key:"lifepath", emoji:"🔢", label:`ライフパス ${result.up.lifePath}`, desc: LIFEPATH_DESC[result.up.lifePath] },
-            { key:"sign",     emoji:"⭐", label: result.up.sunSign,                desc: result.up.sunDesc },
-            { key:"eto",      emoji:"🐾", label:`${result.up.eto}年（${result.up.gogyo}）`, desc: result.up.etoDesc },
-            { key:"moon",     emoji: result.moon.emoji, label: result.moon.name,   desc: result.moon.desc },
+            { key:"lifepath", emoji:"🔢", label:`ライフパス ${result.up.lifePath}`, desc: LIFEPATH_DESC[result.up.lifePath],                    gogyoNote:`あなたの五行は「${result.up.gogyo}」。${GOGYO_DESC[result.up.gogyo]}` },
+            { key:"sign",     emoji:"⭐", label: result.up.sunSign,                desc: result.up.sunDesc,                                      gogyoNote:`${result.up.sunSign}と五行「${result.up.gogyo}」が今日の${selectedRace!.distance}に共鳴。${rNote}` },
+            { key:"eto",      emoji:"🐾", label:`${result.up.eto}年（${result.up.gogyo}）`, desc: result.up.etoDesc,                             gogyoNote:`干支${result.up.eto}の五行「${result.up.gogyo}」と${selectedRace!.distance}との相性—${rNote}` },
+            { key:"moon",     emoji: result.moon.emoji, label: result.moon.name,   desc: result.moon.desc,                                      gogyoNote:`${result.moon.name}は「${result.up.gogyo}」の気を増幅します。${rNote}` },
           ];
           return (
             <div>
@@ -373,7 +467,10 @@ export default function KeibaUranai() {
                       <span style={{ fontSize:11, color:"#907040" }}>{openProfile === item.key ? "▲" : "▼"}</span>
                     </div>
                     {openProfile === item.key && (
-                      <div style={{ padding:"10px 12px", fontSize:12, color:"#a09060", lineHeight:1.8, background:"rgba(200,160,50,0.05)", borderRadius:8, margin:"6px 0 4px" }}>{item.desc}</div>
+                      <div style={{ padding:"10px 12px", lineHeight:1.8, background:"rgba(200,160,50,0.06)", borderRadius:8, margin:"6px 0 4px" }}>
+                        <div style={{ fontSize:12, color:"#b0a070" }}>{item.desc}</div>
+                        <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid rgba(200,160,50,0.15)", fontSize:11, color:"#c8a855" }}>{item.gogyoNote}</div>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -418,9 +515,10 @@ export default function KeibaUranai() {
                         <div style={{ fontWeight:700 }}>{RANK_EMOJI[i]} {horse.name}</div>
                       </div>
                       <div style={{ fontSize:13, color:"#907060", lineHeight:1.8 }}>
-                        {i===0 && `ライフパス数${result.up.lifePath}と馬番${horse.umaban}の波動が共鳴。${result.moon.name}の今日は「${result.moon.tag}」のエネルギーが高まり、この馬の持ち味と一致しています。`}
-                        {i===1 && `${result.up.sunSign}の属性が${horse.wakuban}枠と縁を結びます。1着馬との組み合わせで対抗として押さえる一手。`}
-                        {i===2 && `干支${result.up.eto}年の五行「${result.up.gogyo}」が穴を引き寄せます。少額で夢を買う一手に。`}
+                        {genComment(i, horse, result.up, result.moon, selectedRace!)}
+                      </div>
+                      <div style={{ marginTop:5, fontSize:11, color:"#705840", fontStyle:"italic", lineHeight:1.6 }}>
+                        {gogyoRankNote(result.up.gogyo, i, raceAttr)}
                       </div>
                       <div style={{ marginTop:10, padding:"8px 12px", borderRadius:8, background:"rgba(200,160,50,0.08)", fontSize:12, color:"#c8a040" }}>💡 {BAKEN_TYPE[i]}</div>
                     </div>
