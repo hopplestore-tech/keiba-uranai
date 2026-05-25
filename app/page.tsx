@@ -4,6 +4,34 @@ import { trackEvent } from "@/app/lib/gtag";
 
 const RACES = [
   {
+    id: "20260531_tokyo_11",
+    name: "日本ダービー（東京優駿）",
+    date: "2026年5月31日",
+    venue: "東京11R",
+    distance: "芝2400m",
+    grade: "G1",
+    horses: [
+      { umaban:1,  wakuban:1, name:"ロブチェン",         birthdate:"2023-04-09" },
+      { umaban:2,  wakuban:1, name:"リアライズシリウス",  birthdate:"2023-03-14" },
+      { umaban:3,  wakuban:2, name:"ゴーイントゥスカイ",  birthdate:"2023-03-01" },
+      { umaban:4,  wakuban:2, name:"ライヒスアドラー",    birthdate:"2023-02-20" },
+      { umaban:5,  wakuban:3, name:"フォルテアンジェロ",  birthdate:"2023-03-05" },
+      { umaban:6,  wakuban:3, name:"アウダーシア",        birthdate:"2023-04-02" },
+      { umaban:7,  wakuban:4, name:"コンジェスタス",      birthdate:"2023-02-15" },
+      { umaban:8,  wakuban:4, name:"グリーンエナジー",    birthdate:"2023-03-22" },
+      { umaban:9,  wakuban:5, name:"メイショウハチコウ",  birthdate:"2023-04-15" },
+      { umaban:10, wakuban:5, name:"パントルナイーフ",    birthdate:"2023-03-10" },
+      { umaban:11, wakuban:6, name:"マテンロウゲイル",    birthdate:"2023-02-28" },
+      { umaban:12, wakuban:6, name:"バステール",          birthdate:"2023-03-18" },
+      { umaban:13, wakuban:7, name:"ジャスティンビスタ",  birthdate:"2023-02-10" },
+      { umaban:14, wakuban:7, name:"エムズビギン",        birthdate:"2023-04-20" },
+      { umaban:15, wakuban:8, name:"ショウナンガルフ",    birthdate:"2023-03-08" },
+      { umaban:16, wakuban:8, name:"アスクエジンバラ",    birthdate:"2023-02-25" },
+      { umaban:17, wakuban:9, name:"アルトラムス",        birthdate:"2023-03-30" },
+      { umaban:18, wakuban:9, name:"カフジエメンタール",  birthdate:"2023-04-05" },
+    ],
+  },
+  {
     id: "20260525_tokyo_11",
     name: "安田記念（G1）",
     date: "2026年6月1日",
@@ -167,10 +195,31 @@ type ScoredHorse = {
   umaban: number;
   wakuban: number;
   name: string;
+  birthdate?: string;
   score: number;
 };
 
-function scoreHorse(horse: { umaban: number; wakuban: number }, up: UserProfile) {
+function getGogyoFromDate(dateStr?: string): string | null {
+  if (!dateStr) return null;
+  const year = parseInt(dateStr.split("-")[0]);
+  const etos = ["申","酉","戌","亥","子","丑","寅","卯","辰","巳","午","未"];
+  const gogyoMap: Record<string, string> = { 申:"金",酉:"金",戌:"土",亥:"水",子:"水",丑:"土",寅:"木",卯:"木",辰:"土",巳:"火",午:"火",未:"土" };
+  const eto = etos[(year - 1956) % 12];
+  return gogyoMap[eto];
+}
+
+function calcGogyoAffinity(userGogyo: string, horseGogyo: string | null): number {
+  if (!horseGogyo) return 0;
+  const sojo:   Record<string, string> = { 木:"火", 火:"土", 土:"金", 金:"水", 水:"木" };
+  const sokoku: Record<string, string> = { 木:"土", 土:"水", 水:"火", 火:"金", 金:"木" };
+  if (sojo[userGogyo]   === horseGogyo) return 30;  // 相生（ユーザーが馬を生む）
+  if (sojo[horseGogyo]  === userGogyo)  return 20;  // 相生（馬がユーザーを生む）
+  if (sokoku[userGogyo] === horseGogyo) return -10; // 相剋
+  if (userGogyo === horseGogyo)         return 15;  // 比和（同じ五行）
+  return 0;
+}
+
+function scoreHorse(horse: { umaban: number; wakuban: number; birthdate?: string }, up: UserProfile) {
   let s = 0;
   if (up.lifePath % 2 === horse.umaban % 2) s += 20;
   if (horse.umaban === up.lifePath) s += 30;
@@ -178,6 +227,8 @@ function scoreHorse(horse: { umaban: number; wakuban: number }, up: UserProfile)
   if (elementWaku[up.element]?.includes(horse.wakuban)) s += 25;
   s += Math.floor(Math.sin(horse.umaban * up.lifePath * 7) * 10 + 10);
   s += Math.floor(Math.cos(horse.wakuban * up.lifePath * 3) * 8 + 8);
+  const horseGogyo = getGogyoFromDate(horse.birthdate);
+  s += calcGogyoAffinity(up.gogyo, horseGogyo);
   return s;
 }
 
