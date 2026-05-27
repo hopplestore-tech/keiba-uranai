@@ -35,7 +35,7 @@ export const RACES: Race[] = [
       { umaban:7,  wakuban:4, name:"コンジェスタス",      birthdate:"2023-02-15" },
       { umaban:8,  wakuban:4, name:"グリーンエナジー",    birthdate:"2023-03-22" },
       { umaban:9,  wakuban:5, name:"メイショウハチコウ",  birthdate:"2023-04-15" },
-      { umaban:10, wakuban:5, name:"パントルナイーフ",    birthdate:"2022-02-21" },
+      { umaban:10, wakuban:5, name:"パントルナイーフ",    birthdate:"2023-03-10" },
       { umaban:11, wakuban:6, name:"マテンロウゲイル",    birthdate:"2023-02-28" },
       { umaban:12, wakuban:6, name:"バステール",          birthdate:"2023-03-18" },
       { umaban:13, wakuban:7, name:"ジャスティンビスタ",  birthdate:"2023-02-10" },

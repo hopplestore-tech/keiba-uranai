@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { trackEvent } from "@/app/lib/gtag";
-import { RACES, type Race } from "@/app/lib/races";
+import { RACES, type Race, type Horse } from "@/app/lib/races";
 
 function calcLifePath(dateStr: string) {
   const digits = dateStr.replace(/-/g, "").split("").map(Number);
