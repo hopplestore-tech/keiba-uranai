@@ -401,7 +401,7 @@ export default function KeibaUranai() {
           const profileItems = [
             { key:"lifepath", emoji:"🔢", label:`ライフパス ${result.up.lifePath}`,             desc: LIFEPATH_DESC[result.up.lifePath],              gogyoNote:`あなたの五行は「${result.up.gogyo}」。${GOGYO_DESC[result.up.gogyo]}` },
             { key:"sign",     emoji:"⭐", label: result.up.sunSign,                              desc: result.up.sunDesc,                              gogyoNote:`${result.up.sunSign}と五行「${result.up.gogyo}」が今日の${selectedRace!.distance}に共鳴。${rNote}` },
-            { key:"eto",      emoji:"🐾", label:`${result.up.eto}年（${result.up.gogyo}）`,      desc: result.up.etoDesc,                              gogyoNote:`干支${result.up.eto}の五行「${result.up.gogyo}」と${selectedRace!.distance}との相性—${rNote}` },
+            { key:"eto",      emoji:"🐾", label:`干支 ${result.up.eto}`,                          desc: result.up.etoDesc,                              gogyoNote:`${result.up.eto}年生まれの象意が${selectedRace!.distance}の展開に息づいています。直感を信じて馬を選んで。` },
             { key:"gogyo",    emoji: result.up.jikkanEmoji, label:`五行 ${result.up.jikkanLabel}`, desc: GOGYO_DISPLAY_DESC[result.up.jikkanGogyo],   gogyoNote:`十干の「${result.up.jikkanLabel}」が${selectedRace!.distance}に共鳴。${gogyoRaceNote(result.up.jikkanGogyo, raceAttr)}` },
             { key:"moon",     emoji: result.moon.emoji,     label:`${result.moon.phase}（${result.moon.energy}）`, desc: result.moon.raceType,        gogyoNote:`${result.moon.phase}は「${result.up.gogyo}」の気を増幅します。${result.moon.raceType}。` },
           ];
