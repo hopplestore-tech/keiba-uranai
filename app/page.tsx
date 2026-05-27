@@ -1,111 +1,7 @@
 "use client";
 import { useState } from "react";
 import { trackEvent } from "@/app/lib/gtag";
-
-const RACES = [
-  {
-    id: "20260531_tokyo_11",
-    name: "日本ダービー（東京優駿）",
-    date: "2026年5月31日",
-    venue: "東京11R",
-    distance: "芝2400m",
-    grade: "G1",
-    horses: [
-      { umaban:1,  wakuban:1, name:"ロブチェン",         birthdate:"2023-04-09" },
-      { umaban:2,  wakuban:1, name:"リアライズシリウス",  birthdate:"2023-03-14" },
-      { umaban:3,  wakuban:2, name:"ゴーイントゥスカイ",  birthdate:"2023-03-01" },
-      { umaban:4,  wakuban:2, name:"ライヒスアドラー",    birthdate:"2023-02-20" },
-      { umaban:5,  wakuban:3, name:"フォルテアンジェロ",  birthdate:"2023-03-05" },
-      { umaban:6,  wakuban:3, name:"アウダーシア",        birthdate:"2023-04-02" },
-      { umaban:7,  wakuban:4, name:"コンジェスタス",      birthdate:"2023-02-15" },
-      { umaban:8,  wakuban:4, name:"グリーンエナジー",    birthdate:"2023-03-22" },
-      { umaban:9,  wakuban:5, name:"メイショウハチコウ",  birthdate:"2023-04-15" },
-      { umaban:10, wakuban:5, name:"パントルナイーフ",    birthdate:"2023-03-10" },
-      { umaban:11, wakuban:6, name:"マテンロウゲイル",    birthdate:"2023-02-28" },
-      { umaban:12, wakuban:6, name:"バステール",          birthdate:"2023-03-18" },
-      { umaban:13, wakuban:7, name:"ジャスティンビスタ",  birthdate:"2023-02-10" },
-      { umaban:14, wakuban:7, name:"エムズビギン",        birthdate:"2023-04-20" },
-      { umaban:15, wakuban:8, name:"ショウナンガルフ",    birthdate:"2023-03-08" },
-      { umaban:16, wakuban:8, name:"アスクエジンバラ",    birthdate:"2023-02-25" },
-      { umaban:17, wakuban:9, name:"アルトラムス",        birthdate:"2023-03-30" },
-      { umaban:18, wakuban:9, name:"カフジエメンタール",  birthdate:"2023-04-05" },
-    ],
-  },
-  {
-    id: "20260525_tokyo_11",
-    name: "安田記念（G1）",
-    date: "2026年6月1日",
-    venue: "東京11R",
-    distance: "芝1600m",
-    grade: "G1",
-    horses: [
-      { umaban:1,  wakuban:1, name:"ソングライン" },
-      { umaban:2,  wakuban:1, name:"シュネルマイスター" },
-      { umaban:3,  wakuban:2, name:"ナミュール" },
-      { umaban:4,  wakuban:2, name:"セリフォス" },
-      { umaban:5,  wakuban:3, name:"ダノンザキッド" },
-      { umaban:6,  wakuban:3, name:"ジャックドール" },
-      { umaban:7,  wakuban:4, name:"イルーシヴパンサー" },
-      { umaban:8,  wakuban:4, name:"ソウルラッシュ" },
-      { umaban:9,  wakuban:5, name:"マテンロウオリオン" },
-      { umaban:10, wakuban:5, name:"ウインカーネリアン" },
-      { umaban:11, wakuban:6, name:"ファルコニア" },
-      { umaban:12, wakuban:6, name:"レシステンシア" },
-    ],
-  },
-  {
-    id: "20260524_tokyo_12",
-    name: "丹沢S（3勝クラス）",
-    date: "2026年5月24日",
-    venue: "東京12R",
-    distance: "ダ2100m",
-    grade: null,
-    horses: [
-      { umaban:1,  wakuban:1,  name:"インジケーター" },
-      { umaban:2,  wakuban:1,  name:"オメガタキシード" },
-      { umaban:3,  wakuban:2,  name:"ギュルヴィ" },
-      { umaban:4,  wakuban:2,  name:"サンセットブライト" },
-      { umaban:5,  wakuban:3,  name:"ジェイエルマスター" },
-      { umaban:6,  wakuban:3,  name:"ジャスパーグレイト" },
-      { umaban:7,  wakuban:4,  name:"タイセイアディクト" },
-      { umaban:8,  wakuban:4,  name:"ダカラフェスティヴ" },
-      { umaban:9,  wakuban:5,  name:"タンゴバイラリン" },
-      { umaban:10, wakuban:5,  name:"テーオーマルコーニ" },
-      { umaban:11, wakuban:6,  name:"ニューバラード" },
-      { umaban:12, wakuban:6,  name:"パカーラン" },
-      { umaban:13, wakuban:7,  name:"ビップスコーピオン" },
-      { umaban:14, wakuban:7,  name:"ファリーザ" },
-      { umaban:15, wakuban:8,  name:"ホウオウバリスタ" },
-      { umaban:16, wakuban:8,  name:"メイショウフジ" },
-      { umaban:17, wakuban:9,  name:"ラオラシオン" },
-      { umaban:18, wakuban:9,  name:"ロカヒ" },
-      { umaban:19, wakuban:10, name:"ロングウェイホーム" },
-      { umaban:20, wakuban:10, name:"ワンパット" },
-    ],
-  },
-  {
-    id: "20260524_kyoto_11",
-    name: "鴨川S（3勝クラス）",
-    date: "2026年5月24日",
-    venue: "京都11R",
-    distance: "芝2000m",
-    grade: null,
-    horses: [
-      { umaban:1,  wakuban:1, name:"アルナシーム" },
-      { umaban:2,  wakuban:1, name:"エアファンディタ" },
-      { umaban:3,  wakuban:2, name:"カレンルシェルブル" },
-      { umaban:4,  wakuban:2, name:"サトノグランツ" },
-      { umaban:5,  wakuban:3, name:"シュトルーヴェ" },
-      { umaban:6,  wakuban:3, name:"ダノンベルーガ" },
-      { umaban:7,  wakuban:4, name:"ノースザワールド" },
-      { umaban:8,  wakuban:4, name:"ハーツイストワール" },
-      { umaban:9,  wakuban:5, name:"ブレイヴロッカー" },
-      { umaban:10, wakuban:5, name:"マイネルラウレア" },
-      { umaban:11, wakuban:6, name:"ルージュエヴァイユ" },
-      { umaban:12, wakuban:6, name:"ワンダフルタウン" },
-    ],
-  },
-];
+import { RACES, type Race } from "@/app/lib/races";
 
 function calcLifePath(dateStr: string) {
   const digits = dateStr.replace(/-/g, "").split("").map(Number);
@@ -233,7 +129,6 @@ function scoreHorse(horse: { umaban: number; wakuban: number; birthdate?: string
 }
 
 // ─── Race attribute & deterministic comment helpers ────────────────────────
-type Race = (typeof RACES)[number];
 type RaceAttr = { surface: "turf"|"dirt"; distClass: "sprint"|"mile"|"middle"|"long"; isG1: boolean };
 
 function getRaceAttr(race: Race): RaceAttr {
@@ -324,8 +219,8 @@ function genComment(rank: number, horse: ScoredHorse, up: UserProfile, moon: Ret
   return pool[seed % pool.length];
 }
 
-const WAKU_BG: Record<number, string>   = {1:"#fff",2:"#111",3:"#e22",4:"#36c",5:"#fc0",6:"#3a3",7:"#f84",8:"#f48",9:"#aaa",10:"#7a5230"};
-const WAKU_TEXT: Record<number, string> = {1:"#111",2:"#fff",3:"#fff",4:"#fff",5:"#111",6:"#fff",7:"#fff",8:"#fff",9:"#111",10:"#fff"};
+const WAKU_BG: Record<number, string>   = {0:"rgba(255,255,255,0.1)",1:"#fff",2:"#111",3:"#e22",4:"#36c",5:"#fc0",6:"#3a3",7:"#f84",8:"#f48",9:"#aaa",10:"#7a5230"};
+const WAKU_TEXT: Record<number, string> = {0:"#b0a880",1:"#111",2:"#fff",3:"#fff",4:"#fff",5:"#111",6:"#fff",7:"#fff",8:"#fff",9:"#111",10:"#fff"};
 const RANK_EMOJI = ["🥇","🥈","🥉"];
 const RANK_LABEL = ["大本命","対抗","穴狙い"];
 const BAKEN_TYPE = ["単勝・複勝でまず試して","馬連（1着馬と組み合わせて）","ワイド（大穴を少額で）"];
@@ -408,7 +303,7 @@ export default function KeibaUranai() {
                 style={{ width:"100%", padding:"14px 16px", borderRadius:10, border:"1px solid rgba(200,160,50,0.3)", background:"#1e1e2e", color: selectedRaceId ? "#f0ead6" : "#706050", fontSize:15, outline:"none", boxSizing:"border-box", appearance:"none", cursor:"pointer" }}>
                 <option value="">-- レースを選択してください --</option>
                 {RACES.map(r => (
-                  <option key={r.id} value={r.id}>{r.grade ? `【${r.grade}】` : ""}{r.name}　{r.date.replace("2026年","")}</option>
+                  <option key={r.id} value={r.id}>{r.status === "finished" ? "【終了】" : ""}{r.grade ? `【${r.grade}】` : ""}{r.name}　{r.date.replace("2026年","")}</option>
                 ))}
               </select>
               {selectedRace && (
@@ -426,10 +321,14 @@ export default function KeibaUranai() {
               <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} max="2010-12-31"
                 style={{ width:"100%", padding:"14px 16px", borderRadius:10, border:"1px solid rgba(200,160,50,0.3)", background:"rgba(255,255,255,0.05)", color:"#f0ead6", fontSize:16, outline:"none", boxSizing:"border-box" }} />
             </div>
-            <button onClick={handleDivine} disabled={!birthDate || !selectedRaceId}
-              style={{ ...btn, background: (birthDate && selectedRaceId) ? "linear-gradient(135deg,#c8a040,#e8d070)" : "rgba(255,255,255,0.07)", color: (birthDate && selectedRaceId) ? "#080808" : "#504840", cursor: (birthDate && selectedRaceId) ? "pointer" : "not-allowed" }}>
+            <button onClick={handleDivine}
+              disabled={!birthDate || !selectedRaceId || selectedRace?.status === "finished"}
+              style={{ ...btn, background: (birthDate && selectedRaceId && selectedRace?.status !== "finished") ? "linear-gradient(135deg,#c8a040,#e8d070)" : "rgba(255,255,255,0.07)", color: (birthDate && selectedRaceId && selectedRace?.status !== "finished") ? "#080808" : "#504840", cursor: (birthDate && selectedRaceId && selectedRace?.status !== "finished") ? "pointer" : "not-allowed" }}>
               星の配置を読み解く →
             </button>
+            {selectedRace?.status === "finished" && (
+              <div style={{ textAlign:"center", marginTop:8, fontSize:12, color:"#907040" }}>このレースは終了しました</div>
+            )}
             <button onClick={() => setStep("top")} style={{ ...btnGhost, marginTop:10 }}>もどる</button>
           </div>
         )}
