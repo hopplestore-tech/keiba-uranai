@@ -64,17 +64,36 @@ function getMoonPhase() {
   const diff = (now.getTime() - known.getTime()) / (1000*60*60*24);
   const phase = diff % 29.53;
   const phases = [
-    { name:"新月",    tag:"変化", emoji:"🌑", desc:"変化のエネルギーが高まる時。穴馬・伏兵が台頭しやすい。" },
-    { name:"三日月",  tag:"成長", emoji:"🌒", desc:"成長と上昇の月相。伸び盛りの若い馬が力を発揮する。" },
-    { name:"上弦の月",tag:"攻め", emoji:"🌓", desc:"積極果敢なエネルギー。逃げ・先行馬が粘りやすい。" },
-    { name:"満月前",  tag:"瞬発", emoji:"🌔", desc:"爆発寸前のエネルギー。末脚鋭い馬が一気に伸びる。" },
-    { name:"満月",    tag:"完成", emoji:"🌕", desc:"満ちたエネルギーの頂点。本命馬がその力を存分に発揮。" },
-    { name:"満月後",  tag:"安定", emoji:"🌖", desc:"安定と持続のエネルギー。堅実な差し馬が馬券に絡む。" },
-    { name:"下弦の月",tag:"粘り", emoji:"🌗", desc:"粘りと忍耐の月相。しぶとく追込む馬との縁が深まる。" },
-    { name:"晦日月",  tag:"直感", emoji:"🌘", desc:"直感が冴える時。データより「感じた馬」を信じるべし。" },
+    { phase:"新月",    emoji:"🌑", energy:"瞬発型エネルギー", raceType:"スタートダッシュ・逃げ馬と縁が深い",  typeKey:"瞬発" as const },
+    { phase:"三日月",  emoji:"🌒", energy:"先行型エネルギー", raceType:"好位・先行馬と縁が深い",              typeKey:"先行" as const },
+    { phase:"上弦の月",emoji:"🌓", energy:"先行型エネルギー", raceType:"好位・先行馬と縁が深い",              typeKey:"先行" as const },
+    { phase:"満月前",  emoji:"🌔", energy:"先行型エネルギー", raceType:"好位・先行馬と縁が深い",              typeKey:"先行" as const },
+    { phase:"満月",    emoji:"🌕", energy:"持続型エネルギー", raceType:"末脚・追い込み馬と縁が深い",          typeKey:"持続" as const },
+    { phase:"満月後",  emoji:"🌖", energy:"差し型エネルギー", raceType:"流れに乗る差し馬と縁が深い",          typeKey:"差し" as const },
+    { phase:"下弦の月",emoji:"🌗", energy:"差し型エネルギー", raceType:"流れに乗る差し馬と縁が深い",          typeKey:"差し" as const },
+    { phase:"晦日月",  emoji:"🌘", energy:"瞬発型エネルギー", raceType:"スタートダッシュ・逃げ馬と縁が深い",  typeKey:"瞬発" as const },
   ];
   const idx = Math.min(Math.floor(phase / (29.53/8)), 7);
   return phases[idx];
+}
+
+function calcGogyo(dateStr: string): { gogyo: "木" | "火" | "土" | "金" | "水"; label: string; emoji: string } {
+  const year = new Date(dateStr).getFullYear();
+  const jikkan = year % 10;
+  const map: Record<number, ["木"|"火"|"土"|"金"|"水", string, string]> = {
+    4: ["木", "木（もく）", "🌱"],
+    5: ["木", "木（もく）", "🌱"],
+    6: ["火", "火（か）",   "🔥"],
+    7: ["火", "火（か）",   "🔥"],
+    8: ["土", "土（ど）",   "⛰️"],
+    9: ["土", "土（ど）",   "⛰️"],
+    0: ["金", "金（きん）", "⚙️"],
+    1: ["金", "金（きん）", "⚙️"],
+    2: ["水", "水（すい）", "💧"],
+    3: ["水", "水（すい）", "💧"],
+  };
+  const [gogyo, label, emoji] = map[jikkan];
+  return { gogyo, label, emoji };
 }
 
 type UserProfile = {
@@ -85,6 +104,9 @@ type UserProfile = {
   etoDesc: string;
   eto: string;
   gogyo: string;
+  jikkanGogyo: "木" | "火" | "土" | "金" | "水";
+  jikkanLabel: string;
+  jikkanEmoji: string;
 };
 
 type ScoredHorse = {
@@ -155,6 +177,14 @@ const GOGYO_DESC: Record<string, string> = {
   水: "「水」は柔軟と流れを象徴。展開に乗る器用な馬、流れを読む馬との縁が深い。",
 };
 
+const GOGYO_DISPLAY_DESC: Record<string, string> = {
+  木: "成長と柔軟性。流れを読みながら着実に伸びるタイプ。",
+  火: "情熱と直感。瞬発的なエネルギーで勝負どころを制する。",
+  土: "安定と粘り。どんな流れにも対応できる底力を持つ。",
+  金: "鋭さと決断力。ここぞの場面で切れ味鋭く動く。",
+  水: "知恵と適応力。状況を読んで最適な動きができる。",
+};
+
 function gogyoRaceNote(gogyo: string, attr: RaceAttr): string {
   const t: Record<string, Record<string, string>> = {
     dirt:   { 木:"ダートと「木」は相剋の関係。展開力でカバーする馬を見極めて。", 火:"ダートと「火」の力強さが共鳴。先行馬がレースを支配しやすい一戦。", 土:"ダートと「土」は同じ大地の属性。最高の相性です。", 金:"ダートと「金」は砂を制する強さで共鳴。力強い馬が輝く。", 水:"ダートと「水」は流れを読む力で共鳴。展開次第で動く一戦。" },
@@ -168,55 +198,71 @@ function gogyoRaceNote(gogyo: string, attr: RaceAttr): string {
   return t.middle[gogyo] ?? "";
 }
 
-function gogyoRankNote(gogyo: string, rank: number, attr: RaceAttr): string {
-  if (rank === 0) return gogyoRaceNote(gogyo, attr);
-  if (rank === 1) return `「${gogyo}」の安定した気が対抗馬との縁を深めます。1着馬との組み合わせを信じて。`;
-  return `「${gogyo}」の五行が大穴を引き寄せる役目を担います。少額で夢をつかみに。`;
-}
-
 function genComment(rank: number, horse: ScoredHorse, up: UserProfile, moon: ReturnType<typeof getMoonPhase>, race: Race): string {
   const attr = getRaceAttr(race);
-  const seed = cSeed(up.lifePath, up.gogyo, race.id, rank);
-  const g1 = attr.isG1 ? `${race.name}の大舞台、` : "";
+  const seed = cSeed(up.lifePath, up.gogyo, race.id, rank * 100 + horse.umaban);
+  const horseGogyo = getGogyoFromDate(horse.birthdate);
+  const sojo:   Record<string, string> = { 木:"火", 火:"土", 土:"金", 金:"水", 水:"木" };
+  const sokoku: Record<string, string> = { 木:"土", 土:"水", 水:"火", 火:"金", 金:"木" };
+  const g1 = attr.isG1 ? `${race.name}の大舞台で、` : "";
   const d = race.distance;
 
+  // 五行相性パート（馬との縁を主語に）
+  let affinityLine = "";
+  if (horseGogyo) {
+    if (sojo[up.gogyo] === horseGogyo) {
+      affinityLine = `あなたの「${up.gogyo}」が${horse.name}の「${horseGogyo}」を生む相生の縁。`;
+    } else if (sojo[horseGogyo] === up.gogyo) {
+      affinityLine = `${horse.name}の「${horseGogyo}」があなたの「${up.gogyo}」を高める相生の縁。`;
+    } else if (up.gogyo === horseGogyo) {
+      affinityLine = `同じ「${up.gogyo}」のエネルギー同士。波長が合い、馬の走りが手に取るようにわかる。`;
+    } else if (sokoku[up.gogyo] === horseGogyo) {
+      affinityLine = `「${up.gogyo}」と「${horseGogyo}」は相剋の関係。その緊張感が穴馬候補の予感を漂わせる。`;
+    } else {
+      affinityLine = `「${up.gogyo}」の気が${horse.name}と静かに縁を結ぶ。`;
+    }
+  }
+
   if (rank === 0) {
-    const pool = attr.surface === "dirt"
-      ? [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番が大地のエネルギーで共鳴。ダート${d}の力勝負で${moon.name}の「${moon.tag}」がこの馬を後押しします。`,
-         `${g1}${d}のダート戦、ライフパス数${up.lifePath}が${horse.umaban}番の根性と共振。${moon.name}の今日、力強い走りが期待できます。`]
+    const suffixes = attr.surface === "dirt"
+      ? [`${g1}ライフパス${up.lifePath}と${horse.umaban}番がダート${d}の力勝負で共鳴。${moon.phase}の今日、力強い走りが全てを制します。`,
+         `${g1}${d}の大地でライフパス${up.lifePath}が${horse.umaban}番を引き寄せます。${moon.energy}が後押しする一戦。`]
       : attr.distClass === "long"
-      ? [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番の縁が${d}の長丁場で輝きます。${moon.name}の「${moon.tag}」エネルギーが持久力の馬を導きます。`,
-         `${g1}${d}の長距離で持続する波動がライフパス数${up.lifePath}と${horse.umaban}番を結びます。${moon.name}の今日は底力が全てを決します。`]
+      ? [`${g1}ライフパス${up.lifePath}と${horse.umaban}番の縁が${d}の長丁場で輝きます。${moon.phase}の${moon.energy}が底力を引き出します。`,
+         `${g1}${d}の持久戦でライフパス${up.lifePath}が${horse.umaban}番と深く結びつきます。${moon.raceType}。`]
       : attr.distClass === "sprint"
-      ? [`${g1}ライフパス数${up.lifePath}の瞬発力が${horse.umaban}番と共鳴。${d}の速い流れで${moon.name}の「${moon.tag}」がスピードを爆発させます。`,
-         `${g1}${d}の短距離、ライフパス数${up.lifePath}が${horse.umaban}番の切れ味と直結。${moon.name}の今日、一瞬の閃きを信じて。`]
-      : [`${g1}ライフパス数${up.lifePath}と${horse.umaban}番の波動が${d}の舞台で深く共鳴。${moon.name}の「${moon.tag}」エネルギーがこの縁を確かなものにします。`,
-         `${g1}${d}の舞台でライフパス数${up.lifePath}が${horse.umaban}番を指し示しています。${moon.name}の今日、この縁を信じて全力で臨みましょう。`];
-    return pool[seed % pool.length];
+      ? [`${g1}ライフパス${up.lifePath}の瞬発力が${horse.umaban}番と共鳴。${d}の速い流れで${moon.energy}がスピードを爆発させます。`,
+         `${g1}${d}の短距離でライフパス${up.lifePath}が${horse.umaban}番の切れ味と直結。${moon.raceType}。`]
+      : [`${g1}ライフパス${up.lifePath}と${horse.umaban}番の波動が${d}の舞台で深く共鳴。${moon.phase}の${moon.energy}がこの縁を確かなものにします。`,
+         `${g1}${d}の舞台でライフパス${up.lifePath}が${horse.umaban}番を指し示しています。${moon.raceType}。`];
+    const suffix = suffixes[seed % suffixes.length];
+    return affinityLine ? `${affinityLine} ${suffix}` : suffix;
   }
 
   if (rank === 1) {
-    const pool = attr.surface === "dirt"
-      ? [`${up.sunSign}の安定した力が${horse.wakuban}枠と結びつきます。ダート${d}の力比べで1着馬との馬連が黄金の組み合わせになります。`,
-         `干支${up.eto}の「${up.gogyo}」の気がダート${d}の${horse.name}を対抗に押し上げます。1着馬との組み合わせで手堅く。`]
+    const suffixes = attr.surface === "dirt"
+      ? [`${up.sunSign}の力がダート${d}の${horse.wakuban}枠と結びつきます。1着馬との馬連が手堅い一手。`,
+         `${d}の力比べで${up.sunSign}が${horse.name}との縁を深めます。1着馬との組み合わせで押さえて。`]
       : attr.distClass === "long"
-      ? [`${up.sunSign}の持久力が${horse.wakuban}枠と共鳴します。${d}の長丁場は1着馬との馬連で対抗として押さえて。`,
-         `スタミナが問われる${d}。${up.sunSign}の粘り強さが${horse.name}との縁を深めます。1着馬と合わせた馬連が一手。`]
-      : [`${up.sunSign}の属性が${horse.wakuban}枠と縁を結びます。${d}の舞台で1着馬との組み合わせを対抗として押さえる一手。`,
-         `${up.sunSign}の感性が${horse.name}の末脚と共鳴。${d}の流れで1着馬との馬連が面白い。`];
-    return pool[seed % pool.length];
+      ? [`${up.sunSign}の粘り強さが${d}の${horse.wakuban}枠と共鳴します。1着馬との馬連で対抗として押さえて。`,
+         `${d}の持久戦で${up.sunSign}が${horse.name}との縁を深めます。1着馬と合わせた馬連が一手。`]
+      : [`${up.sunSign}が${d}の${horse.wakuban}枠と縁を結びます。1着馬との組み合わせを対抗として押さえる一手。`,
+         `${up.sunSign}の感性が${horse.name}と共鳴。${d}の流れで1着馬との馬連が面白い。`];
+    const suffix = suffixes[seed % suffixes.length];
+    return affinityLine ? `${affinityLine} ${suffix}` : suffix;
   }
 
   const g1b = attr.isG1 ? "G1の大舞台だからこそ、" : "";
-  const pool = attr.surface === "dirt"
-    ? [`${g1b}干支${up.eto}年の「${up.gogyo}」がダートの荒れ展開で穴を引き寄せます。${d}の力比べで${horse.name}が激走する可能性を秘めています。`,
-       `${g1b}「${up.gogyo}」の五行がダート${d}で穴馬を導きます。${horse.name}への少額投資で夢を買う一手に。`]
+  const suffixes = attr.surface === "dirt"
+    ? [`${g1b}ダート${d}の荒れ展開で${horse.name}が激走する可能性を秘めています。${moon.phase}の今日、少額で夢を買う一手に。`,
+       `${g1b}${d}の力比べで${horse.name}が浮上する一場面を描いています。穴が開くかもしれません。`]
     : attr.distClass === "long"
-    ? [`${g1b}干支${up.eto}の「${up.gogyo}」が長距離の底力勝負で穴を引き寄せます。${horse.name}が${d}の舞台で激走する一場面を描いています。`,
-       `${g1b}${d}のスタミナ勝負、「${up.gogyo}」の持続エネルギーが${horse.name}を浮上させます。大穴として少額で夢を。`]
-    : [`${g1b}干支${up.eto}年の五行「${up.gogyo}」が穴を引き寄せます。${d}の展開で${horse.name}が激走する可能性を秘めています。`,
-       `${g1b}「${up.gogyo}」の気が${d}の展開で穴馬を呼び込みます。${horse.name}への少額投資で夢を買う一手に。`];
-  return pool[seed % pool.length];
+    ? [`${g1b}${d}の底力勝負で${horse.name}が激走する一場面を描いています。少額で夢を。`,
+       `${g1b}${d}のスタミナ戦、${horse.name}が持ち前の粘りで浮上します。${moon.raceType}。`]
+    : [`${g1b}${d}の展開で${horse.name}が激走する可能性を秘めています。少額で夢を買う一手に。`,
+       `${g1b}${moon.phase}の今日、${d}の流れで${horse.name}が穴を開けるかもしれません。`];
+  const suffix = suffixes[seed % suffixes.length];
+  return affinityLine ? `${affinityLine} ${suffix}` : suffix;
 }
 
 const WAKU_BG: Record<number, string>   = {0:"rgba(255,255,255,0.1)",1:"#fff",2:"#111",3:"#e22",4:"#36c",5:"#fc0",6:"#3a3",7:"#f84",8:"#f48",9:"#aaa",10:"#7a5230"};
@@ -240,11 +286,16 @@ export default function KeibaUranai() {
     trackEvent("divination_started", { race_id: selectedRaceId });
     setStep("loading");
     setTimeout(() => {
-      const lifePath = calcLifePath(birthDate);
-      const sunSign  = getSunSign(birthDate);
-      const etoData  = getEto(birthDate);
-      const moon     = getMoonPhase();
-      const up: UserProfile = { lifePath, sunSign: sunSign!.name, element: sunSign!.el, sunDesc: sunSign!.desc, etoDesc: etoData.desc, eto: etoData.eto, gogyo: etoData.gogyo };
+      const lifePath  = calcLifePath(birthDate);
+      const sunSign   = getSunSign(birthDate);
+      const etoData   = getEto(birthDate);
+      const gogyoData = calcGogyo(birthDate);
+      const moon      = getMoonPhase();
+      const up: UserProfile = {
+        lifePath, sunSign: sunSign!.name, element: sunSign!.el, sunDesc: sunSign!.desc,
+        etoDesc: etoData.desc, eto: etoData.eto, gogyo: etoData.gogyo,
+        jikkanGogyo: gogyoData.gogyo, jikkanLabel: gogyoData.label, jikkanEmoji: gogyoData.emoji,
+      };
       const ranked = [...selectedRace.horses]
         .map(h => ({ ...h, score: scoreHorse(h, up) }))
         .sort((a, b) => b.score - a.score);
@@ -348,10 +399,11 @@ export default function KeibaUranai() {
           const raceAttr = getRaceAttr(selectedRace!);
           const rNote = gogyoRaceNote(result.up.gogyo, raceAttr);
           const profileItems = [
-            { key:"lifepath", emoji:"🔢", label:`ライフパス ${result.up.lifePath}`, desc: LIFEPATH_DESC[result.up.lifePath],                    gogyoNote:`あなたの五行は「${result.up.gogyo}」。${GOGYO_DESC[result.up.gogyo]}` },
-            { key:"sign",     emoji:"⭐", label: result.up.sunSign,                desc: result.up.sunDesc,                                      gogyoNote:`${result.up.sunSign}と五行「${result.up.gogyo}」が今日の${selectedRace!.distance}に共鳴。${rNote}` },
-            { key:"eto",      emoji:"🐾", label:`${result.up.eto}年（${result.up.gogyo}）`, desc: result.up.etoDesc,                             gogyoNote:`干支${result.up.eto}の五行「${result.up.gogyo}」と${selectedRace!.distance}との相性—${rNote}` },
-            { key:"moon",     emoji: result.moon.emoji, label: result.moon.name,   desc: result.moon.desc,                                      gogyoNote:`${result.moon.name}は「${result.up.gogyo}」の気を増幅します。${rNote}` },
+            { key:"lifepath", emoji:"🔢", label:`ライフパス ${result.up.lifePath}`,             desc: LIFEPATH_DESC[result.up.lifePath],              gogyoNote:`あなたの五行は「${result.up.gogyo}」。${GOGYO_DESC[result.up.gogyo]}` },
+            { key:"sign",     emoji:"⭐", label: result.up.sunSign,                              desc: result.up.sunDesc,                              gogyoNote:`${result.up.sunSign}と五行「${result.up.gogyo}」が今日の${selectedRace!.distance}に共鳴。${rNote}` },
+            { key:"eto",      emoji:"🐾", label:`${result.up.eto}年（${result.up.gogyo}）`,      desc: result.up.etoDesc,                              gogyoNote:`干支${result.up.eto}の五行「${result.up.gogyo}」と${selectedRace!.distance}との相性—${rNote}` },
+            { key:"gogyo",    emoji: result.up.jikkanEmoji, label:`五行 ${result.up.jikkanLabel}`, desc: GOGYO_DISPLAY_DESC[result.up.jikkanGogyo],   gogyoNote:`十干の「${result.up.jikkanLabel}」が${selectedRace!.distance}に共鳴。${gogyoRaceNote(result.up.jikkanGogyo, raceAttr)}` },
+            { key:"moon",     emoji: result.moon.emoji,     label:`${result.moon.phase}（${result.moon.energy}）`, desc: result.moon.raceType,        gogyoNote:`${result.moon.phase}は「${result.up.gogyo}」の気を増幅します。${result.moon.raceType}。` },
           ];
           return (
             <div>
@@ -415,9 +467,6 @@ export default function KeibaUranai() {
                       </div>
                       <div style={{ fontSize:13, color:"#907060", lineHeight:1.8 }}>
                         {genComment(i, horse, result.up, result.moon, selectedRace!)}
-                      </div>
-                      <div style={{ marginTop:5, fontSize:11, color:"#705840", fontStyle:"italic", lineHeight:1.6 }}>
-                        {gogyoRankNote(result.up.gogyo, i, raceAttr)}
                       </div>
                       <div style={{ marginTop:10, padding:"8px 12px", borderRadius:8, background:"rgba(200,160,50,0.08)", fontSize:12, color:"#c8a040" }}>💡 {BAKEN_TYPE[i]}</div>
                     </div>
